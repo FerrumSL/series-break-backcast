@@ -1,0 +1,72 @@
+# Series break backcaster
+
+When a statistics office changes how it measures something (a new base year, a new industry
+classification, a redesigned survey), the series jumps for a reason that has nothing to do with
+the economy. The office publishes the new method from some year on, and users either glue the
+old and new parts together or cut the history off. How the gluing is done matters: splicing
+national accounts by carrying the level gap back unchanged biases long-run growth
+([Prados de la Escosura, VoxEU](https://cepr.org/voxeu/columns/mismeasuring-long-run-growth-bias-spliced-national-accounts)),
+and a 2025 Cambridge working paper argues that the ONS's spliced backcast of post-war investment
+was wrong ([CBR WP543](https://www.jbs.cam.ac.uk/wp-content/uploads/2025/07/cbr-wp543.pdf)).
+The UN handbook on backcasting national accounts has been in draft since 2018
+([UNSD](https://unstats.un.org/unsd/nationalaccount/aeg/2018/M12_8iiib_Backcasting.pdf)), and
+the Australian Bureau of Statistics' backcasting system is internal. On CRAN, packages exist for
+benchmarking and temporal disaggregation (`tempdisagg`, `gseries`, `rjd3bench`) and for
+chain-linking index numbers (`IndexNumberTools`), but none backcasts a series across a
+methodology break or compares the ways of doing it.
+
+This tool extends the new-method series back with several published methods side by side,
+reports how far they disagree, and measures each method's error where the office published both
+series for a few years.
+
+**Status:** methods and synthetic tests only. No real series yet.
+
+## Methods
+
+`old` and `new` are named numeric vectors (names are years) that share at least one year, the
+link. Each method returns the new series extended back to the first old year.
+
+| Function | Assumes | Keeps from the old series |
+|---|---|---|
+| `splice_ratio()` | the gap is a constant factor | growth rates |
+| `splice_difference()` | the gap is a constant amount | absolute changes |
+| `splice_interpolate(base = )` | the old series was right in its own base year and the gap built up gradually since, as its weights went out of date (Prados de la Escosura) | growth rates, corrected by a geometric drift |
+| `splice_indicator(indicator = )` | a related series was measured the same way throughout | nothing; predicts from the indicator |
+
+`backcast_compare()` runs every method that applies and adds `spread_pct`, the range across
+methods as a share of their mean, per year. `backcast_growth()` gives each method's average
+yearly growth over a span. `backcast_validate()` hides the first years of the new series where
+both were published, backcasts them, and reports the error against the published values.
+
+```r
+source("R/backcast.R")
+x <- backcast_compare(old, new, base = 2005)
+backcast_growth(x, from = 2000, to = 2015)
+backcast_validate(old, new, hide = 2015, method = splice_ratio)
+```
+
+## Tests
+
+`tests/testthat/test_backcast.R` builds a true series growing 3% a year, distorts it in a known
+way to make the old one, and checks which methods recover it:
+
+- a constant level factor: the ratio splice is exact, the difference splice is not
+- a constant amount: the difference splice is exact, the ratio splice is not
+- a gap that builds up from the old base year (2005) to 20% at the link (2015): interpolation
+  is exact, while the ratio splice gives 1.8% a year of growth for 2000-2015 instead of 3%
+- an exact or slightly noisy indicator: the indicator method recovers the level
+- with no distortion all methods agree and the spread is zero
+- validation on a published overlap gives zero error for the right method
+
+```sh
+Rscript -e 'testthat::test_dir("tests/testthat")'
+```
+
+## Next
+
+- Real series: Kazakhstan statistics with a documented methodology change and years published
+  both ways (CPI rebasings, OKED industry classification changes, GDP moves to newer SNA
+  standards, labour force survey redesigns).
+- Break detection as a check on the documented break date (`strucchange::breakpoints`).
+
+R 4.6.1; packages pinned in `renv.lock` (`renv::restore()`). Licence: GPL-2.
