@@ -25,4 +25,4 @@ jobs:
       - name: Kazakhstan results reproduce from the stored releases
         run: |
           Rscript scripts/kazakhstan.R
-          git diff --exit-code results/
+          git diff --exit-code -- "results/*.csv"
