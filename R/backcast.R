@@ -60,6 +60,23 @@ splice_interpolate <- function(old, new, base, link = overlap(old, new)[1]) {
   extend(old[e] * r, new)
 }
 
+# Mixed splicing (de la Fuente): between the two. The old series is taken to be wrong already
+# in `base`, by a share `rho` of the gap at the link, and the error to grow geometrically from
+# there, as it would if it came from activities the old series missed that grow faster than the
+# rest. In logs the error is d_T * rho^((T - t) / T), with t counted from `base`; rho = 1 is the
+# ratio splice, and rho near 0 approaches interpolation. de la Fuente leaves rho to judgement.
+splice_mixed <- function(old, new, base, rho, link = overlap(old, new)[1]) {
+  check_link(old, new, link)
+  if (length(link) != 1) stop("Mixed splicing takes a single link period.")
+  if (!(rho > 0 && rho <= 1)) stop("`rho` must be in (0, 1].")
+  span <- as.numeric(link) - as.numeric(base)
+  if (!(span > 0)) stop("`base` must come before the link.")
+  e <- early(old, new)
+  d_link <- log(new[[link]] / old[[link]])
+  t <- as.numeric(e) - as.numeric(base)
+  extend(old[e] * exp(d_link * rho^((span - t) / span)), new)
+}
+
 # Indicator: fit log(new) on log(indicator) over the periods both cover, then predict the new
 # series back from the indicator. Ignores the old series, so it does not inherit its errors;
 # it needs an indicator measured the same way throughout and at least 3 shared periods.
@@ -76,13 +93,32 @@ splice_indicator <- function(old, new, indicator) {
 }
 
 
+# Break check: does a spliced series change level or trend somewhere, and where? Fits log(x) on
+# time, tests for one break with the sup-F test (Andrews; `strucchange`), and if the test rejects
+# at `level` dates the break by least squares. Segments have at least `h` periods. Returns the
+# first period of the new segment (NA if no break is found) and the test's p-value. Use it to
+# check a documented break date against the data, or to find one that was not documented.
+# ponytail: one break only; BIC over several breaks overfits on short annual series.
+find_break <- function(x, h = 3, level = 0.05) {
+  t <- as.numeric(names(x))
+  y <- log(x)
+  p <- strucchange::sctest(strucchange::Fstats(y ~ t, from = h))$p.value
+  at <- NA_real_
+  if (p < level) at <- t[strucchange::breakpoints(y ~ t, h = h, breaks = 1)$breakpoints + 1]
+  c(period = at, p_value = unname(p))
+}
+
+
 # Every applicable method side by side, one column each, plus the spread across them
 #
-# `base` enables the interpolation, `indicator` the indicator method. `spread_pct` is the range
+# `base` enables the interpolation, `base` with `rho` the mixed splice, `indicator` the indicator
+# method. `spread_pct` is the range
 # across methods as a percentage of their mean, per period.
-backcast_compare <- function(old, new, base = NULL, indicator = NULL, link = overlap(old, new)[1]) {
+backcast_compare <- function(old, new, base = NULL, indicator = NULL, rho = NULL,
+                             link = overlap(old, new)[1]) {
   out <- list(ratio = splice_ratio(old, new, link), difference = splice_difference(old, new, link))
   if (!is.null(base)) out$interpolation <- splice_interpolate(old, new, base, link)
+  if (!is.null(base) && !is.null(rho)) out$mixed <- splice_mixed(old, new, base, rho, link)
   if (!is.null(indicator)) out$indicator <- splice_indicator(old, new, indicator)
   periods <- names(out$ratio)
   x <- data.frame(period = as.numeric(periods),

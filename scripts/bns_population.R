@@ -65,10 +65,18 @@ stopifnot(all(residual[names(residual) != "2022"] == 0))  # the identity holds e
 old <- c(pop[as.character(2009:2021)], "2022" = pop[["2021"]] + flows[["2021"]])
 new <- pop[as.character(2022:max(bns$year))]
 
-# Interpolation takes the 2009 census as right, so the gap builds up between the two censuses
-backcast <- backcast_compare(old, new, base = 2009)
+# The data should show the break where the method changed, at the start of 2022
+published <- pop[as.character(2009:max(bns$year))]
+brk <- find_break(published)
+stopifnot(brk[["period"]] == 2022)
+
+# Interpolation takes the 2009 census as right, so the gap builds up between the two censuses.
+# The mixed splice (rho = 0.5) takes half the 2022 gap to have been there already in 2009;
+# rho is a judgement, shown here as one illustration.
+backcast <- backcast_compare(old, new, base = 2009, rho = 0.5)
 backcast$published <- unname(pop[as.character(backcast$period)])
-long_run <- backcast_growth(backcast[c("period", "ratio", "difference", "interpolation", "published")],
+long_run <- backcast_growth(backcast[c("period", "ratio", "difference", "interpolation", "mixed",
+                                       "published")],
                             from = 2009, to = 2021)
 
 round_df <- function(x) {
@@ -80,6 +88,7 @@ dir.create("results", showWarnings = FALSE)
 write.csv(round_df(backcast), "results/population_backcast.csv", row.names = FALSE)
 write.csv(round_df(long_run), "results/population_growth.csv", row.names = FALSE)
 
+cat(sprintf("Break found at %d (sup-F p = %s)\n", brk[["period"]], format.pval(brk[["p_value"]], eps = 0.001)))
 cat(sprintf("Census correction at the start of 2022: %+.0f people (%+.2f%%)\n",
             residual[["2022"]], 100 * residual[["2022"]] / old[["2022"]]))
 print(round_df(backcast[backcast$period %in% c(2009, 2015, 2021, 2022), ]), row.names = FALSE)

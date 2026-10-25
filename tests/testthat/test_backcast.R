@@ -86,3 +86,28 @@ test_that("integer series of realistic size do not overflow", {
   expect_false(anyNA(b))
   expect_equal(b[["2009"]], 15982352 * 16763173 / 16203173)
 })
+
+test_that("an error that grows geometrically from a share rho at base is recovered by mixed splicing", {
+  # de la Fuente's model: log error d_t = d_T * rho^((T - t) / T), t from base 2005, link 2015
+  rho <- 0.4
+  d_link <- log(1.2)
+  t <- as.numeric(old_years) - 2005
+  old <- truth[old_years] / exp(d_link * rho^((10 - t) / 10))
+  expect_equal(splice_mixed(old, published_new, base = 2005, rho = rho), truth)
+  expect_false(isTRUE(all.equal(splice_ratio(old, published_new), truth)))
+  expect_false(isTRUE(all.equal(splice_interpolate(old, published_new, base = 2005), truth)))
+})
+
+test_that("mixed splicing with rho = 1 is the ratio splice", {
+  old <- truth[old_years] * seq(0.8, 0.9, length.out = length(old_years))
+  expect_equal(splice_mixed(old, published_new, base = 2005, rho = 1),
+               splice_ratio(old, published_new))
+})
+
+test_that("find_break locates a level jump and finds none in a steady series", {
+  set.seed(1)
+  steady <- truth * exp(rnorm(length(years), sd = 0.002))
+  jumped <- steady * ifelse(years >= 2012, 1.1, 1)
+  expect_equal(find_break(jumped)[["period"]], 2012)
+  expect_true(is.na(find_break(steady)[["period"]]))
+})
