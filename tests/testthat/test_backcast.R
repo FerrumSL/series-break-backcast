@@ -77,3 +77,12 @@ test_that("bad inputs stop with a clear message", {
   expect_error(splice_ratio(truth[as.character(2015:2016)], published_new), "no periods before")
   expect_error(splice_interpolate(truth[old_years], published_new, base = 2016), "before the link")
 })
+
+test_that("integer series of realistic size do not overflow", {
+  # Populations are stored as integers; old * new would pass .Machine$integer.max
+  old <- setNames(c(15982352L, 16203173L, 16440254L), 2009:2011)
+  new <- setNames(c(16763173L, 17000000L), 2010:2011)
+  b <- splice_ratio(old, new)
+  expect_false(anyNA(b))
+  expect_equal(b[["2009"]], 15982352 * 16763173 / 16203173)
+})

@@ -33,7 +33,7 @@ check_link <- function(old, new, link) {
 splice_ratio <- function(old, new, link = overlap(old, new)[1]) {
   check_link(old, new, link)
   e <- early(old, new)
-  extend(old[e] * sum(new[link]) / sum(old[link]), new)
+  extend(old[e] * (sum(as.numeric(new[link])) / sum(as.numeric(old[link]))), new)
 }
 
 # Difference splice: shift the old series by new - old at the link. Keeps the old absolute

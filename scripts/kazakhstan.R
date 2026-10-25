@@ -24,9 +24,8 @@ cases <- data.frame(
   # in constant prices of different reference years: there new/old is never 1, so the
   # interpolation's premise does not hold.
   old_base = c(NA, 2005, NA, 2009),
-  # A related series measured the same way throughout, from the new release, for the indicator
-  # method: electricity production (kWh), compiled from IEA energy balances.
-  indicator = c("EG.ELC.PROD.KH", NA, "EG.ELC.PROD.KH", NA),
+  # Whether to run the indicator method (see `indicators` below)
+  indicator = c(TRUE, FALSE, TRUE, FALSE),
   hide_from = c(2005, 2005, 2005, 2009),
   hide_to = c(2008, 2014, 2008, 2015),
   note = c("Industry value added, constant tenge: reference year moved from 2000 to 2005",
@@ -50,7 +49,7 @@ fetch_wdi <- function(series, vintage) {
 needed <- unique(rbind(
   setNames(cases[c("series", "old_vintage")], c("series", "vintage")),
   setNames(cases[c("series", "new_vintage")], c("series", "vintage")),
-  setNames(cases[!is.na(cases$indicator), c("indicator", "new_vintage")], c("series", "vintage"))
+  data.frame(series = "EG.ELC.PROD.KH", vintage = "201412")
 ))
 wdi <- if (file.exists(raw)) read.csv(raw, colClasses = c(vintage = "character")) else NULL
 missing <- needed[!paste(needed$series, needed$vintage) %in% paste(wdi$series, wdi$vintage), ]
@@ -66,14 +65,34 @@ get_series <- function(series, vintage) {
   setNames(x$value, x$year)
 }
 
+# Oil production (TWh; crude, condensates and NGLs), Energy Institute Statistical Review of World
+# Energy via Our World in Data. Oil dominates Kazakhstan's industry, which makes it the natural
+# indicator; electricity is kept for comparison.
+oil_raw <- "data/raw/owid_oil_production_kaz.csv"
+if (!file.exists(oil_raw)) {
+  oil <- read.csv("https://ourworldindata.org/grapher/oil-production-by-country.csv?useColumnShortNames=true")
+  write.csv(oil[oil$code == "KAZ", c("year", "oil_production_twh")], oil_raw, row.names = FALSE)
+}
+oil <- read.csv(oil_raw)
+
+# Related series measured the same way throughout, for the indicator method
+indicators <- list(
+  oil = setNames(oil$oil_production_twh, oil$year),
+  electricity = get_series("EG.ELC.PROD.KH", "201412")  # kWh, from IEA energy balances
+)
+
 methods_for <- function(k) {
   m <- list(ratio = splice_ratio, difference = splice_difference)
   if (!is.na(k$old_base)) {
     m$interpolation <- function(old, new) splice_interpolate(old, new, base = k$old_base)
   }
-  if (!is.na(k$indicator)) {
-    ind <- get_series(k$indicator, k$new_vintage)
-    m$indicator <- function(old, new) splice_indicator(old, new, ind)
+  if (k$indicator) {
+    for (i in names(indicators)) {
+      m[[paste0("indicator_", i)]] <- local({
+        ind <- indicators[[i]]
+        function(old, new) splice_indicator(old, new, ind)
+      })
+    }
   }
   m
 }
@@ -109,10 +128,14 @@ k <- cases[cases$case == "industry_rebase_2014", ]
 old <- get_series(k$series, k$old_vintage)
 published <- get_series(k$series, k$new_vintage)
 new <- published[as.numeric(names(published)) >= 2005]
-backcast <- backcast_compare(old, new, indicator = get_series(k$indicator, k$new_vintage))
+backcast <- backcast_compare(old, new, indicator = indicators$oil)
+backcast$indicator_electricity <- unname(
+  splice_indicator(old, new, indicators$electricity)[as.character(backcast$period)])
 backcast$world_bank <- unname(published[as.character(backcast$period)])
 backcast <- backcast[backcast$period >= 1995 & backcast$period <= 2013, ]
-long_run <- backcast_growth(backcast[c("period", "ratio", "difference", "indicator", "world_bank")],
+names(backcast)[names(backcast) == "indicator"] <- "indicator_oil"
+long_run <- backcast_growth(backcast[c("period", "ratio", "difference", "indicator_oil",
+                                       "indicator_electricity", "world_bank")],
                             from = 1995, to = 2013)
 
 
@@ -128,7 +151,8 @@ write.csv(round_df(backcast), "results/industry_backcast.csv", row.names = FALSE
 write.csv(round_df(long_run), "results/industry_growth.csv", row.names = FALSE)
 
 png("results/industry_backcast.png", width = 1600, height = 1000, res = 200)
-cols <- c(ratio = "#1b6ca8", difference = "#c0392b", indicator = "#27ae60")
+cols <- c(ratio = "#1b6ca8", difference = "#c0392b", indicator_oil = "#27ae60",
+          indicator_electricity = "#e67e22")
 matplot(backcast$period, backcast[names(cols)] / 1e12, type = "l", lty = 1, lwd = 2, col = cols,
         xlab = "", ylab = "trillion tenge, 2005 prices", las = 1,
         main = "Kazakhstan industry value added, backcast from 2005 to 1995")

@@ -1,13 +1,15 @@
 "case","method","hidden","mean_abs_error_pct","max_abs_error_pct","growth_published_pct","growth_backcast_pct"
 "industry_rebase_2014","ratio","2005-2008",1.294,1.691,6.245,5.939
 "industry_rebase_2014","difference","2005-2008",5.41,11.903,6.245,3.3
-"industry_rebase_2014","indicator","2005-2008",4.122,8.653,6.245,4.064
+"industry_rebase_2014","indicator_oil","2005-2008",19.662,21.719,6.245,12.784
+"industry_rebase_2014","indicator_electricity","2005-2008",4.122,8.653,6.245,4.064
 "industry_revision_2025","ratio","2005-2014",0.449,0.905,4.24,4.249
 "industry_revision_2025","difference","2005-2014",0.463,0.91,4.24,4.253
 "industry_revision_2025","interpolation","2005-2014",0.413,0.873,4.24,4.24
 "gdp_rebase_2014","ratio","2005-2008",0,0,5.953,5.953
 "gdp_rebase_2014","difference","2005-2008",5.006,11.426,5.953,3.126
-"gdp_rebase_2014","indicator","2005-2008",1.627,4.239,5.953,5.737
+"gdp_rebase_2014","indicator_oil","2005-2008",33.036,40.706,5.953,20.743
+"gdp_rebase_2014","indicator_electricity","2005-2008",1.627,4.239,5.953,5.737
 "population_2024","ratio","2009-2015",0.11,0.142,1.436,1.446
 "population_2024","difference","2009-2015",0.275,0.356,1.436,1.399
 "population_2024","interpolation","2009-2015",1.692,3.171,1.436,1.904
