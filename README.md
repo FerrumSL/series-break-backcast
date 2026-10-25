@@ -19,7 +19,8 @@ This tool extends the new-method series back with several published methods side
 reports how far they disagree, and measures each method's error where the office published both
 series for a few years.
 
-**Status:** methods and synthetic tests only. No real series yet.
+**Status:** draft. Methods, synthetic tests, and a first validation on four real Kazakhstan
+revisions (below).
 
 ## Methods
 
@@ -62,11 +63,46 @@ way to make the old one, and checks which methods recover it:
 Rscript -e 'testthat::test_dir("tests/testthat")'
 ```
 
+## Kazakhstan: four real revisions
+
+The World Bank keeps every past release of its World Development Indicators (WDI Database
+Archives, API source 57). Where a later release revised a series' history, the earlier release
+is the old-method series and the later one the new-method series, published for the same years.
+`scripts/kazakhstan.R` takes four such revisions for Kazakhstan, hides the first years of the new
+series, backcasts them from the old one, and compares with what was published. A new release
+carries its own method back only to its base year (before it, the new series is the old one
+rescaled), so only years from that base year on are hidden.
+
+| Case | Change | Hidden | Ratio | Difference | Interpolation |
+|---|---|---|---|---|---|
+| Industry value added, Dec 2014 release | base year 2000 to 2005 | 2005-2008 | 1.29 | 5.41 | n/a |
+| Industry value added, Dec 2025 release | history revised, mostly from 2009 on, same 2005 base | 2005-2014 | 0.45 | 0.46 | 0.41 |
+| GDP, Dec 2014 release (control) | base year 2000 to 2005, growth unchanged | 2005-2008 | 0.00 | 5.01 | n/a |
+| Population, Dec 2024 release | UN WPP 2022 replaced by WPP 2024 | 2009-2015 | 0.11 | 0.28 | 1.69 |
+
+Mean absolute error of the backcast, % of the published level. Full results, including the
+average growth each method implies over the hidden years, are in `results/kazakhstan.csv`.
+
+- The control works: the GDP rebasing changed only the level, so the ratio splice is exact.
+- The difference splice is the wrong tool for growing series. Over 2005-2009 it gives industry
+  growth of 3.3% a year against 6.2% published, and GDP 3.1% against 6.0%.
+- On the industry rebasing, even the best method misses: the ratio splice gives 5.9% a year
+  against 6.2%, because the new base year changed the industry's own growth rates.
+- Interpolation does not apply to rebasings. The two releases are in constant prices of
+  different years, so the ratio new/old is never 1, which interpolation assumes for the old base
+  year. Where both releases are in the same units, it was best on the 2025 industry revision
+  and worst on population, where the UN revised every year rather than letting a gap build up
+  after the 2009 census. The causes in this table are read from the data; the next step is to confirm
+each in the release notes.
+
+Run `Rscript scripts/kazakhstan.R`. It downloads the releases once into
+`data/raw/wdi_kaz_vintages.csv` and reruns offline after that.
+
 ## Next
 
-- Real series: Kazakhstan statistics with a documented methodology change and years published
-  both ways (CPI rebasings, OKED industry classification changes, GDP moves to newer SNA
-  standards, labour force survey redesigns).
+- Confirm each revision's cause in the Bureau of National Statistics' own release notes.
+- More cases, including series straight from the Bureau (OKED classification changes, labour
+  force survey redesigns), and an indicator series for the indicator method.
 - Break detection as a check on the documented break date (`strucchange::breakpoints`).
 
 R 4.6.1; packages pinned in `renv.lock` (`renv::restore()`). Licence: GPL-2.
