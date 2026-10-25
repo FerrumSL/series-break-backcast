@@ -28,26 +28,55 @@ check_link <- function(old, new, link) {
 }
 
 
-# Ratio splice (retropolation): scale the old series by new/old at the link. Keeps the old
-# growth rates and moves the whole level gap to the start of the series.
+#' Ratio splice (retropolation)
+#'
+#' Scales the old series by new/old at the link. Keeps the old growth rates and moves the whole
+#' level gap to the start of the series.
+#'
+#' @param old,new Named numeric vectors, names = periods (years), all values positive, sharing
+#'   at least one period.
+#' @param link Period(s) where the two series are linked; the first shared period by default.
+#' @return The new series extended back to the first old period, a named vector in period order.
+#' @examples
+#' old <- c("2000" = 90, "2001" = 93, "2002" = 96)
+#' new <- c("2002" = 100, "2003" = 103)
+#' splice_ratio(old, new)
+#' @export
 splice_ratio <- function(old, new, link = overlap(old, new)[1]) {
   check_link(old, new, link)
   e <- early(old, new)
   extend(old[e] * (sum(as.numeric(new[link])) / sum(as.numeric(old[link]))), new)
 }
 
-# Difference splice: shift the old series by new - old at the link. Keeps the old absolute
-# changes instead of its growth rates.
+#' Difference splice
+#'
+#' Shifts the old series by new - old at the link. Keeps the old absolute changes instead of
+#' its growth rates.
+#'
+#' @inheritParams splice_ratio
+#' @inherit splice_ratio return
+#' @export
 splice_difference <- function(old, new, link = overlap(old, new)[1]) {
   check_link(old, new, link)
   e <- early(old, new)
   extend(old[e] + mean(new[link] - old[link]), new)
 }
 
-# Interpolation (Prados de la Escosura): the old series is taken as right in its own base
-# period `base`, and the gap with the new series is taken to have built up gradually from then
-# to the link, as the old weights went out of date. The ratio new/old grows geometrically from
-# 1 at `base` to its value at the link; before `base` it stays 1.
+#' Interpolation (Prados de la Escosura)
+#'
+#' The old series is taken as right in its own base period `base`, and the gap with the new
+#' series to have built up gradually from then to the link, as the old weights went out of
+#' date. The ratio new/old grows geometrically from 1 at `base` to its value at the link; before
+#' `base` it stays 1.
+#'
+#' @inheritParams splice_ratio
+#' @param base Period in which the old series is taken to be right, such as its base year or a
+#'   census year.
+#' @param link A single period where the two series are linked.
+#' @inherit splice_ratio return
+#' @references Prados de la Escosura, L. (2016). Mismeasuring long-run growth: the bias from
+#'   splicing national accounts - the case of Spain. *Cliometrica* 10(3), 251-275.
+#' @export
 splice_interpolate <- function(old, new, base, link = overlap(old, new)[1]) {
   check_link(old, new, link)
   if (length(link) != 1) stop("Interpolation takes a single link period.")
@@ -60,11 +89,22 @@ splice_interpolate <- function(old, new, base, link = overlap(old, new)[1]) {
   extend(old[e] * r, new)
 }
 
-# Mixed splicing (de la Fuente): between the two. The old series is taken to be wrong already
-# in `base`, by a share `rho` of the gap at the link, and the error to grow geometrically from
-# there, as it would if it came from activities the old series missed that grow faster than the
-# rest. In logs the error is d_T * rho^((T - t) / T), with t counted from `base`; rho = 1 is the
-# ratio splice, and rho near 0 approaches interpolation. de la Fuente leaves rho to judgement.
+#' Mixed splicing (de la Fuente)
+#'
+#' Between the ratio splice and interpolation. The old series is taken to be wrong already in
+#' `base`, by a share `rho` of the gap at the link, and the error to grow geometrically from
+#' there, as it would if it came from activities the old series missed that grow faster than the
+#' rest. In logs the error is `d_T * rho^((T - t) / T)`, with `t` counted from `base`; `rho = 1`
+#' is the ratio splice, and `rho` near 0 approaches interpolation. de la Fuente leaves `rho` to
+#' judgement.
+#'
+#' @inheritParams splice_interpolate
+#' @param base Period from which the error is taken to grow.
+#' @param rho Share of the gap at the link already present in `base`, in (0, 1].
+#' @inherit splice_ratio return
+#' @references de la Fuente, A. (2013). A mixed splicing procedure for economic time series.
+#'   BBVA Research Working Paper 13/02.
+#' @export
 splice_mixed <- function(old, new, base, rho, link = overlap(old, new)[1]) {
   check_link(old, new, link)
   if (length(link) != 1) stop("Mixed splicing takes a single link period.")
@@ -77,9 +117,16 @@ splice_mixed <- function(old, new, base, rho, link = overlap(old, new)[1]) {
   extend(old[e] * exp(d_link * rho^((span - t) / span)), new)
 }
 
-# Indicator: fit log(new) on log(indicator) over the periods both cover, then predict the new
-# series back from the indicator. Ignores the old series, so it does not inherit its errors;
-# it needs an indicator measured the same way throughout and at least 3 shared periods.
+#' Indicator splice
+#'
+#' Fits log(new) on log(indicator) over the periods both cover, then predicts the new series
+#' back from the indicator. Ignores the old series, so it does not inherit its errors; it needs
+#' an indicator measured the same way throughout and at least 3 shared periods.
+#'
+#' @inheritParams splice_ratio
+#' @param indicator Named numeric vector of a related series measured the same way throughout.
+#' @return The new series extended back over the old periods the indicator covers.
+#' @export
 # ponytail: exp(fitted log) gives the median, a slight underestimate of the mean level when the
 # fit is loose; add the lognormal correction if residuals are large.
 splice_indicator <- function(old, new, indicator) {
@@ -93,11 +140,19 @@ splice_indicator <- function(old, new, indicator) {
 }
 
 
-# Break check: does a spliced series change level or trend somewhere, and where? Fits log(x) on
-# time, tests for one break with the sup-F test (Andrews; `strucchange`), and if the test rejects
-# at `level` dates the break by least squares. Segments have at least `h` periods. Returns the
-# first period of the new segment (NA if no break is found) and the test's p-value. Use it to
-# check a documented break date against the data, or to find one that was not documented.
+#' Find a break in a series
+#'
+#' Does a spliced series change level or trend somewhere, and where? Fits log(x) on time, tests
+#' for one break with the sup-F test (Andrews), and if the test rejects at `level` dates the
+#' break by least squares (Bai-Perron, via strucchange). Use it to check a documented break date
+#' against the data, or to find one that was not documented.
+#'
+#' @param x Named numeric vector, names = periods, all values positive.
+#' @param h Minimum number of periods in each segment.
+#' @param level Significance level of the test.
+#' @return Named numeric: `period`, the first period of the new segment (NA if no break is
+#'   found), and `p_value`.
+#' @export
 # ponytail: one break only; BIC over several breaks overfits on short annual series.
 find_break <- function(x, h = 3, level = 0.05) {
   t <- as.numeric(names(x))
@@ -109,11 +164,21 @@ find_break <- function(x, h = 3, level = 0.05) {
 }
 
 
-# Every applicable method side by side, one column each, plus the spread across them
-#
-# `base` enables the interpolation, `base` with `rho` the mixed splice, `indicator` the indicator
-# method. `spread_pct` is the range
-# across methods as a percentage of their mean, per period.
+#' Compare backcast methods side by side
+#'
+#' Runs every method that applies: `base` enables interpolation, `base` with `rho` the mixed
+#' splice, `indicator` the indicator method.
+#'
+#' @inheritParams splice_mixed
+#' @param base,rho,indicator Optional; see [splice_interpolate()], [splice_mixed()],
+#'   [splice_indicator()].
+#' @return A data frame with `period`, one column per method, and `spread_pct`, the range across
+#'   methods as a percentage of their mean, per period.
+#' @examples
+#' old <- c("2000" = 90, "2001" = 93, "2002" = 96)
+#' new <- c("2002" = 100, "2003" = 103)
+#' backcast_compare(old, new, base = 2000)
+#' @export
 backcast_compare <- function(old, new, base = NULL, indicator = NULL, rho = NULL,
                              link = overlap(old, new)[1]) {
   out <- list(ratio = splice_ratio(old, new, link), difference = splice_difference(old, new, link))
@@ -128,7 +193,12 @@ backcast_compare <- function(old, new, base = NULL, indicator = NULL, rho = NULL
   x
 }
 
-# Average yearly growth (%) from `from` to `to` under each method in a backcast_compare() table
+#' Average yearly growth under each method
+#'
+#' @param x A [backcast_compare()] table.
+#' @param from,to Periods to measure growth between.
+#' @return A data frame with `method` and `growth_pct`, the average yearly growth in percent.
+#' @export
 backcast_growth <- function(x, from = min(x$period), to = max(x$period)) {
   methods <- setdiff(names(x), c("period", "spread_pct"))
   a <- x[x$period == from, methods]
@@ -138,9 +208,16 @@ backcast_growth <- function(x, from = min(x$period), to = max(x$period)) {
 }
 
 
-# Test a method where the office published both series for several periods: hide the new
-# series for `hide` (its first periods), backcast them from what is left, and compare with the
-# published values. `method` is a function of (old, new) returning a backcast.
+#' Measure a method's error where both series were published
+#'
+#' Hides the new series for `hide` (its first periods), backcasts them from what is left, and
+#' compares with the published values.
+#'
+#' @inheritParams splice_ratio
+#' @param hide The earliest periods of the new series, all published in both series.
+#' @param method A function of (old, new) returning a backcast, such as [splice_ratio].
+#' @return A data frame with `period`, `published`, `backcast` and `error_pct`.
+#' @export
 backcast_validate <- function(old, new, hide, method) {
   hide <- as.character(hide)
   if (!all(hide %in% overlap(old, new))) stop("`hide` must be periods published both ways.")

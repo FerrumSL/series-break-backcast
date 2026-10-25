@@ -19,10 +19,16 @@ jobs:
 
       - uses: r-lib/actions/setup-renv@v2
 
-      - name: Tests with known distortions
-        run: Rscript -e 'testthat::test_dir("tests/testthat", stop_on_failure = TRUE)'
+      - name: R CMD check (includes the tests with known distortions)
+        run: |
+          R CMD build .
+          R CMD check --no-manual --as-cran backcast_*.tar.gz
+          grep -q "Status: OK" backcast.Rcheck/00check.log
+        env:
+          _R_CHECK_CRAN_INCOMING_REMOTE_: false
 
-      - name: Kazakhstan results reproduce from the stored releases
+      - name: Kazakhstan results reproduce from the stored data
         run: |
           Rscript scripts/kazakhstan.R
+          Rscript scripts/bns_population.R
           git diff --exit-code -- "results/*.csv"

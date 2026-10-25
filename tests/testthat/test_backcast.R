@@ -1,9 +1,5 @@
-# Run from the project root: Rscript -e 'testthat::test_dir("tests/testthat")'
-#
 # Every test builds the true new-method series, distorts it in a known way to make the old one,
 # and checks which methods recover the truth.
-root <- normalizePath(file.path(testthat::test_path(), "..", ".."))
-source(file.path(root, "R/backcast.R"), local = TRUE)
 
 years <- 2000:2020
 truth <- setNames(100 * 1.03^(years - 2000), years)  # 3% a year
