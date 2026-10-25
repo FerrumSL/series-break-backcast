@@ -26,6 +26,11 @@ This tool extends the new-method series back with several published methods side
 reports how far they disagree, and measures each method's error where the office published both
 series for a few years.
 
+It is the official-statistics twin of
+[breakpoint-drift](https://github.com/FerrumSL/breakpoint-drift), which separates a change in
+antibiotic breakpoints from a real change in resistance: in both, a change in how something is
+measured has to be told apart from a change in the thing itself.
+
 **Status:** v1. Four methods, synthetic tests, a validation on four real Kazakhstan revisions,
 and a backcast of Kazakhstan's industry value added to 1995.
 
