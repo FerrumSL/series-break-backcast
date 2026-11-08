@@ -4,19 +4,31 @@
 \alias{splice_indicator}
 \title{Indicator splice}
 \usage{
-splice_indicator(old, new, indicator)
+splice_indicator(old, new, indicator, spec = c("levels", "growth"))
 }
 \arguments{
 \item{old, new}{Named numeric vectors, names = periods (years), all values positive, sharing
 at least one period.}
 
 \item{indicator}{Named numeric vector of a related series measured the same way throughout.}
+
+\item{spec}{\code{"levels"} (default) or \code{"growth"}.}
 }
 \value{
-The new series extended back over the old periods the indicator covers.
+The new series extended back over the old periods the indicator covers, with the fit
+in \code{attr(, "fit")}.
 }
 \description{
-Fits log(new) on log(indicator) over the periods both cover, then predicts the new series
-back from the indicator. Ignores the old series, so it does not inherit its errors; it needs
-an indicator measured the same way throughout and at least 3 shared periods.
+Fits the new series on a related indicator over the periods both cover, then predicts the new
+series back from the indicator. Ignores the old series, so it does not inherit its errors; it
+needs an indicator measured the same way throughout and at least 3 shared periods.
+}
+\details{
+\code{spec = "levels"} regresses log(new) on log(indicator). On two trending series this can be a
+spurious regression and it is extrapolated outside the fit window, so treat it as fragile: the
+fit (elasticity, R2, residual SE, n, window) is returned as \code{attr(, "fit")}, and a warning is
+given when the backcast spans more periods than the fit window or the elasticity is outside
+between 0 and 3. \code{spec = "growth"} regresses yearly log changes (needs consecutive annual periods) and
+rebuilds the level backwards from the first new period; it does not depend on a common trend.
+The result is the median path (exp of the fitted log), not the mean.
 }

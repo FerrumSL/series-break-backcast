@@ -31,7 +31,12 @@ It is the official-statistics twin of
 antibiotic breakpoints from a real change in resistance: in both, a change in how something is
 measured has to be told apart from a change in the thing itself.
 
-**Status:** v1.0.0, an installable R package. Five methods and a break test, synthetic tests,
+**Terms used throughout.** *Old series*: the old-method figures. *New series*: the new-method
+figures. *Link*: the period(s) published both ways that tie them together. *Base*: the period in
+which the old series is assumed correct. *Backcast*: the new series extended back over the old
+periods, an estimate, never a published figure. *Splice*: any method that does this.
+
+**Status:** v1.1.0, an installable R package. Five methods and a break test, synthetic tests,
 a validation on four real Kazakhstan revisions, and two real backcasts: Kazakhstan's industry
 value added to 1995, and its population across the 2021 census.
 
@@ -62,9 +67,26 @@ approaches interpolation. de la Fuente leaves `rho` to judgement
 methods as a share of their mean, per year. `backcast_growth()` gives each method's average
 yearly growth over a span. `backcast_validate()` hides the first years of the new series where
 both were published, backcasts them, and reports the error against the published values.
-`find_break()` tests whether a spliced series changes level or trend (sup-F test, then the
-break dated by least squares, via `strucchange`), to check a documented break date against the
-data or find an undocumented one.
+`find_break()` tests whether a spliced series changes level or trend: sup-F test on a quadratic
+trend in logs, p-value from an AR(1) bootstrap under no break, then the break dated by least
+squares (via `strucchange`). Use it to check a documented break date against the data, not as
+proof of a cause. One break only; false-break and detection rates are in
+`results/simulation_find_break.csv` (`scripts/simulation.R`).
+
+Measured false-break rate (n = 22, 200 runs, Monte Carlo SE about 2 points, nominal 5%): 5% with
+independent noise, 5.5% with smooth slowing growth, 11% and 8.5% when the noise is strongly
+autocorrelated (AR 0.7, without and with curvature), down from 97.5% with the earlier
+linear-trend sup-F. Detection of a 10% level jump: 99-100%; of a 5% jump: 53-65%, dated at the
+true year (median error 0). So the test is reliable for large jumps, still somewhat
+anti-conservative under strong autocorrelation, and weak for small jumps.
+
+Input rules: annual series named by year, numeric, all values positive, no missing values or
+duplicate years (otherwise the function stops and names the first bad period). `link` can be a
+number or a string. With several link years the ratio splice uses sum(new)/sum(old) and the
+difference splice mean(new - old). `spread_pct` is the range of the methods' assumptions, not a
+confidence interval. `splice_indicator()` returns its fit as `attr(, "fit")` and warns when it
+extrapolates over more periods than it was fitted on; `spec = "growth"` fits yearly changes
+instead of levels.
 
 ```r
 x <- backcast_compare(old, new, base = 2005, rho = 0.5)
@@ -74,8 +96,11 @@ backcast_validate(old, new, hide = 2015, method = splice_ratio)
 
 ## Tests
 
-`tests/testthat/test_backcast.R` builds a true series growing 3% a year, distorts it in a known
-way to make the old one, and checks which methods recover it:
+`tests/testthat/test_backcast.R` has hand-worked numbers (answers written out as literals) and
+consistency checks. The consistency checks build a true series growing 3% a year, distort it in
+a known way to make the old one, and check which methods recover it. They show the code
+inverts its own model, not that a method is accurate on real data; accuracy is the validation on
+real revisions above and the simulation for `find_break()`.
 
 - a constant level factor: the ratio splice is exact, the difference splice is not
 - a constant amount: the difference splice is exact, the ratio splice is not
@@ -86,7 +111,10 @@ way to make the old one, and checks which methods recover it:
   `rho = 1` it equals the ratio splice
 - with no distortion all methods agree and the spread is zero
 - validation on a published overlap gives zero error for the right method
-- `find_break()` dates a 10% level jump correctly and finds nothing in a steady noisy series
+- `find_break()` dates a 10% level jump correctly, finds nothing in a steady noisy series, and
+  does not flag a smooth slowing, autocorrelated series
+- bad input (NA, zero, negative, duplicate, unsorted, non-annual names, numeric `link`) errors or
+  is handled as documented
 - integer series the size of a population do not overflow
 
 ```sh
@@ -138,6 +166,39 @@ the hidden years, are in `results/kazakhstan.csv`; the cases are described in
   oil-led industry, but over the 2009-2013 fit window oil output barely moved while industry
   grew, so the fitted elasticity is 2.2 and the backcast overshoots.
 
+### How far to trust the validation
+
+Differences under 0.1 percentage points count as a tie, so on the 2025 industry revision
+(0.41 / 0.45 / 0.46) the three methods tie. Four cases, one of them a control (GDP, where the
+ratio splice is exact by construction), cannot rank methods in general, and no multiplicity
+adjustment is applied or claimed.
+
+*Leave one case out* (`results/validation_leave_one_out.csv`): choose between the ratio and
+difference splices, the two that apply in every case, by their error on the other three cases,
+then report the error on the held-out one. The rule picks the ratio splice every time; its
+errors on the held-out cases are 1.29%, 0.45%, 0.00% and 0.11%. This is the honest version of
+"the ratio splice is within 1.3%": a rule that never sees the case it is tested on, on four
+cases.
+
+*Hide length* (`results/validation_by_hide_length.csv`): error for every method when only the
+first 1, 2, ... years are hidden. Errors grow with the number of years hidden; with one year
+hidden all methods are exact on the 2025 industry revision.
+
+*Simulation* (`scripts/simulation_splice.R`, `results/simulation_splice.csv`, 500 runs per cell,
+noise 1%): average error of the backcast level, in percent (RMSE, 3% true growth, 3-year link):
+
+| Truth | Ratio | Difference | Interpolation | Mixed (rho 0.5) |
+|---|---|---|---|---|
+| constant ratio | **0.9** | 7.6 | 13.4 | 7.6 |
+| constant difference | 5.1 | **1.2** | 16.7 | 11.4 |
+| gap grows linearly in logs from base | 13.3 | 25.9 | **0.5** | 6.0 |
+| gap grows quadratically in logs | 15.8 | 29.2 | **2.5** | 8.3 |
+| level shift plus drift | 6.8 | 16.7 | 6.7 | **1.2** |
+
+Each method wins where its assumption holds and is the worst when it does not; interpolation
+and mixed are given the true base year. The real revisions are the only evidence about which
+assumption holds in practice, and they are few.
+
 ## Kazakhstan: industry value added back to 1995
 
 The December 2014 release measures industry on the 2005 reference year. Taking it as published
@@ -155,8 +216,9 @@ from 2005 and backcasting 1995-2004 from the old release gives:
 
 The methods put long-run industry growth anywhere from 2.2% to 9.4% a year, and the 1995 level
 anywhere from 0.85 to 2.86 trillion tenge (`results/industry_backcast.csv`). The World Bank's
-published back years are the ratio splice to within rounding, and the validation above favours
-the ratio splice for this kind of change. Both indicators fail in opposite directions: power
+published back years agree with the ratio splice to within rounding (a reproduction check, not
+evidence that it is right), and in the four validation cases above, picked after seeing the data,
+the ratio splice had the lowest error; no multiplicity adjustment is applied. Both indicators fail in opposite directions: power
 output fell by 29% from 1995 to 1999 while industry held level, and oil output rose fourfold
 from 1995 to 2013, faster than the rest of industry.
 
@@ -171,8 +233,9 @@ last census plus births and arrivals, minus deaths and departures. Its published
 is still based on the 2009 census up to the start of 2021 and on the 2021 census from the start of
 2022. The census correction was never spread back: the accounting identity holds to the person
 in every year except 2021-2022, where the population jumps by 380,751 (2.0%) more than births,
-deaths and migration explain. `find_break()` puts the break at 2022 (p < 0.001) from the
-published series alone.
+deaths and migration explain. That identity residual is the evidence for the break; `find_break()`
+(bootstrap p = 0.002, the smallest it can give with 499 draws) agrees on 2022 and is supporting
+only.
 
 `scripts/bns_population.R` rebuilds the old-method population for 2022 with the Bureau's own
 method, which gives the one year measured both ways, and backcasts 2009-2021:
@@ -186,14 +249,32 @@ method, which gives the one year measured both ways, and backcasts 2009-2021:
 | mixed, `rho = 0.5` | 16.14 m | 19.24 m | 1.47% a year |
 
 Interpolation is the method the census logic points to, since the 2009 count is the old
-series' own benchmark: it keeps 2009 and spreads the 380,751 over the twelve years, so growth
-was 0.15 points a year faster than published. The ratio splice instead puts 2% more people in
-Kazakhstan in 2009 than that census counted. For comparison, the UN's World Population
+series' own benchmark: it keeps 2009 and spreads the 380,751 over the twelve years. If the 2009
+count is right, growth was about 0.15 points a year faster than published (the methods give
+1.37% to 1.55% against 1.40% published). The ratio splice instead puts 2% more people in
+Kazakhstan in 2009 than that census counted. The 2022 old-method value is rebuilt from the
+accounting identity, not published, so the one overlap year is constructed. For comparison, the UN's World Population
 Prospects 2024 (via WDI) gives 1.45% a year for mid-2009 to mid-2021 and also raises 2009, which
 is the mixed splice's assumption.
 
 Run `Rscript scripts/bns_population.R`. It downloads the four Bureau tables once into
 `data/raw/bns_population.csv`, checks the accounting identity, and reruns offline after that.
+
+## Data sources and licences
+
+World Bank WDI archives (CC BY 4.0), downloaded 2026-10; oil production from Our World in Data
+(Energy Institute Statistical Review of World Energy, downloaded 2026-10; check their current
+terms before reuse); population tables from the Bureau of National Statistics of Kazakhstan
+(stat.gov.kz, downloaded 2026-10; official statistics, source cited). Raw files are stored in
+`data/raw/` and the CI reproduces the results from those stored files, not from a new download.
+Third-party statements here (the UN handbook still being a 2018 draft, no CRAN package for
+backcasting) were checked on 2026-10-24 and have not been rechecked for this release.
+
+## Reproducing
+
+`Rscript scripts/kazakhstan.R`, `Rscript scripts/bns_population.R`, and for the simulations
+`Rscript scripts/simulation.R`, `Rscript scripts/simulation_splice.R` (fixed seeds, no
+downloads once `data/raw/` is present). Package versions are in `renv.lock`.
 
 ## Next
 
@@ -203,5 +284,5 @@ Run `Rscript scripts/bns_population.R`. It downloads the four Bureau tables once
   longer fit window.
 - Several breaks per series in `find_break()`.
 
-R 4.6.1; packages pinned in `renv.lock` (`renv::restore()`). The scripts `source("R/backcast.R")`
+R as recorded in `renv.lock`; packages pinned in `renv.lock` (`renv::restore()`). The scripts `source("R/backcast.R")`
 so they run from a clone without installing the package. Licence: GPL-2.

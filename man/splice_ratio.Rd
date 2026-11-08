@@ -4,13 +4,15 @@
 \alias{splice_ratio}
 \title{Ratio splice (retropolation)}
 \usage{
-splice_ratio(old, new, link = overlap(old, new)[1])
+splice_ratio(old, new, link = NULL)
 }
 \arguments{
 \item{old, new}{Named numeric vectors, names = periods (years), all values positive, sharing
 at least one period.}
 
-\item{link}{Period(s) where the two series are linked; the first shared period by default.}
+\item{link}{Period(s) where the two series are linked, as numbers or strings; the first
+shared period by default (\code{NULL}). With several periods the ratio splice uses
+sum(new) / sum(old) over them, the difference splice mean(new - old).}
 }
 \value{
 The new series extended back to the first old period, a named vector in period order.

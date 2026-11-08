@@ -1,6 +1,6 @@
 Package: backcast
 Title: Extend Official Statistics Back Across Methodology Breaks
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: person("Ferrya", email = "114243237+FerrumSL@users.noreply.github.com",
     role = c("aut", "cre"))
 Description: When a statistics office changes how it measures something, it
@@ -9,7 +9,7 @@ Description: When a statistics office changes how it measures something, it
     by side (ratio splice, difference splice, interpolation after Prados de la
     Escosura, mixed splicing after de la Fuente, and an indicator regression),
     reports how far they disagree, measures each method's error where both series
-    were published, and tests where a spliced series breaks.
+    were published, and checks a spliced series for one level or trend break (a test that is reliable for large jumps; see the README for its false-break rate).
 License: GPL-2
 URL: https://github.com/FerrumSL/series-break-backcast
 BugReports: https://github.com/FerrumSL/series-break-backcast/issues

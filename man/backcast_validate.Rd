@@ -15,9 +15,13 @@ at least one period.}
 \item{method}{A function of (old, new) returning a backcast, such as \link{splice_ratio}.}
 }
 \value{
-A data frame with \code{period}, \code{published}, \code{backcast} and \code{error_pct}.
+A data frame with \code{period}, \code{published}, \code{backcast} and \code{error_pct} (signed:
+positive = backcast too high). With two or more hidden periods, \code{attr(, "growth_error_pp")}
+is the average yearly growth over the hidden span in the backcast minus the published one,
+in percentage points.
 }
 \description{
 Hides the new series for \code{hide} (its first periods), backcasts them from what is left, and
-compares with the published values.
+compares with the published values. Unit tests with exact recovery check consistency; this is
+the accuracy check on real revisions.
 }

@@ -4,22 +4,39 @@
 \alias{find_break}
 \title{Find a break in a series}
 \usage{
-find_break(x, h = 3, level = 0.05)
+find_break(x, h = 4, level = 0.05, B = 499, seed = 1)
 }
 \arguments{
 \item{x}{Named numeric vector, names = periods, all values positive.}
 
-\item{h}{Minimum number of periods in each segment.}
+\item{h}{Minimum number of periods in each segment (at least 4, the model has 3 coefficients).}
 
-\item{level}{Significance level of the test.}
+\item{level}{Nominal significance level of the test.}
+
+\item{B}{Number of bootstrap replications.}
+
+\item{seed}{Seed for the bootstrap.}
 }
 \value{
-Named numeric: \code{period}, the first period of the new segment (NA if no break is
-found), and \code{p_value}.
+A list: \code{period}, the first period of the new segment (NA if none); \code{p_value};
+\code{reason}, one of \code{"ok"} (a break was found), \code{"no_break"}, \code{"too_short"}, \code{"failed"}.
 }
 \description{
-Does a spliced series change level or trend somewhere, and where? Fits log(x) on time, tests
-for one break with the sup-F test (Andrews), and if the test rejects at \code{level} dates the
-break by least squares (Bai-Perron, via strucchange). Use it to check a documented break date
-against the data, or to find one that was not documented.
+Does a spliced series change level or trend somewhere, and where? Fits log(x) on a quadratic
+time trend (so smooth slowing or speeding growth is not read as a break), takes the sup-F
+statistic for one break in that model (Andrews), and gets its p-value from a parametric
+bootstrap under the no-break null with AR(1) errors fitted to the residuals (the asymptotic
+critical values reject far too often on short autocorrelated annual series). If the test
+rejects at \code{level}, the break is dated by least squares (Bai-Perron, via strucchange). Use it
+to check a documented break date against the data, not as proof of a cause. One break only.
+}
+\details{
+\code{level} is nominal: the actual false-break rate on short series is in \code{scripts/simulation.R}
+and the README. The bootstrap uses \code{seed} and restores the caller's random state.
+}
+\references{
+Andrews, D. W. K. (1993). Tests for parameter instability and structural change
+with unknown change point. \emph{Econometrica} 61(4), 821-856. Bai, J. and Perron, P. (2003).
+Computation and analysis of multiple structural change models. \emph{Journal of Applied
+Econometrics} 18(1), 1-22.
 }

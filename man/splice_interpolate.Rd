@@ -4,7 +4,7 @@
 \alias{splice_interpolate}
 \title{Interpolation (Prados de la Escosura)}
 \usage{
-splice_interpolate(old, new, base, link = overlap(old, new)[1])
+splice_interpolate(old, new, base, link = NULL)
 }
 \arguments{
 \item{old, new}{Named numeric vectors, names = periods (years), all values positive, sharing

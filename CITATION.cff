@@ -2,12 +2,13 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "backcast: extend official statistics back across methodology breaks"
-abstract: "R package that extends a new-method statistics series back across a methodology break with five published splicing methods side by side, reports how far they disagree, validates them where both series were published, and tests where a spliced series breaks."
+abstract: "R package that extends a new-method statistics series back across a methodology break with five published splicing methods side by side, reports how far they disagree, validates them where both series were published, and checks a spliced series for one level or trend break."
 authors:
-  - alias: Ferrya
-    email: 114243237+FerrumSL@users.noreply.github.com
-version: 1.0.0
-date-released: "2026-10-26"
+  - given-names: "M."
+    family-names: Ualiyev
+    orcid: "https://orcid.org/0009-0001-9389-0158"
+version: 1.1.0
+date-released: "2026-11-08"
 license: GPL-2.0-only
 repository-code: "https://github.com/FerrumSL/series-break-backcast"
 keywords: [backcasting, splicing, official statistics, national accounts, R]

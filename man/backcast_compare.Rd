@@ -10,7 +10,7 @@ backcast_compare(
   base = NULL,
   indicator = NULL,
   rho = NULL,
-  link = overlap(old, new)[1]
+  link = NULL
 )
 }
 \arguments{
@@ -23,8 +23,10 @@ at least one period.}
 \item{link}{A single period where the two series are linked.}
 }
 \value{
-A data frame with \code{period}, one column per method, and \code{spread_pct}, the range across
-methods as a percentage of their mean, per period.
+A data frame with \code{period}, one column per method, \code{spread_pct}, the range across the
+methods available in that period as a percentage of their mean (a range of assumptions, not a
+confidence interval), and \code{note}, which names methods missing in a period (an indicator that
+does not reach back that far).
 }
 \description{
 Runs every method that applies: \code{base} enables interpolation, \code{base} with \code{rho} the mixed

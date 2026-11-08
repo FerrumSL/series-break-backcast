@@ -4,7 +4,7 @@
 \alias{splice_mixed}
 \title{Mixed splicing (de la Fuente)}
 \usage{
-splice_mixed(old, new, base, rho, link = overlap(old, new)[1])
+splice_mixed(old, new, base, rho, link = NULL)
 }
 \arguments{
 \item{old, new}{Named numeric vectors, names = periods (years), all values positive, sharing

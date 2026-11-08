@@ -9,10 +9,11 @@ backcast_growth(x, from = min(x$period), to = max(x$period))
 \arguments{
 \item{x}{A \code{\link[=backcast_compare]{backcast_compare()}} table.}
 
-\item{from, to}{Periods to measure growth between.}
+\item{from, to}{Periods to measure growth between (different, both in the table).}
 }
 \value{
-A data frame with \code{method} and \code{growth_pct}, the average yearly growth in percent.
+A data frame with \code{method} and \code{growth_pct}, the average yearly growth in percent
+(NA for a method with no value in \code{from} or \code{to}).
 }
 \description{
 Average yearly growth under each method

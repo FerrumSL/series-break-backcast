@@ -122,6 +122,39 @@ validation <- do.call(rbind, lapply(seq_len(nrow(cases)), function(i) {
 }))
 
 
+# 1b. Validation by hide length: hide only the first k years, k = 1 .. all, for every method
+by_hide <- do.call(rbind, lapply(seq_len(nrow(cases)), function(i) {
+  k <- cases[i, ]
+  old <- get_series(k$series, k$old_vintage)
+  new <- get_series(k$series, k$new_vintage)
+  new <- new[as.numeric(names(new)) >= k$hide_from]
+  methods <- methods_for(k)
+  do.call(rbind, lapply(seq_len(k$hide_to - k$hide_from + 1), function(n_hide) {
+    hide <- k$hide_from:(k$hide_from + n_hide - 1)
+    do.call(rbind, lapply(names(methods), function(m) {
+      v <- backcast_validate(old, new, hide, methods[[m]])
+      data.frame(case = k$case, method = m, years_hidden = n_hide,
+                 mean_abs_error_pct = mean(abs(v$error_pct)), max_abs_error_pct = max(abs(v$error_pct)))
+    }))
+  }))
+}))
+
+# 1c. Leave one case out: choose between the two methods that apply everywhere (ratio, difference)
+# by their mean error on the OTHER cases, then report that choice's error on the held-out case.
+# This is the honest version of "the best method": the rule never sees the case it is tested on.
+# Four cases, one of them a control; no multiplicity adjustment.
+common <- validation[validation$method %in% c("ratio", "difference"), ]
+leave_one_out <- do.call(rbind, lapply(cases$case, function(held) {
+  rest <- common[common$case != held, ]
+  score <- tapply(rest$mean_abs_error_pct, rest$method, mean)
+  pick <- names(which.min(score))
+  best_here <- common[common$case == held, ]
+  data.frame(held_out = held, chosen_by_others = pick,
+             error_of_chosen_pct = best_here$mean_abs_error_pct[best_here$method == pick],
+             error_of_other_pct = best_here$mean_abs_error_pct[best_here$method != pick])
+}))
+
+
 # 2. Backcast: industry value added on the 2005 reference year, from 2005 back to 1995
 
 k <- cases[cases$case == "industry_rebase_2014", ]
@@ -147,6 +180,8 @@ round_df <- function(x) {
 dir.create("results", showWarnings = FALSE)
 write.csv(round_df(validation), "results/kazakhstan.csv", row.names = FALSE)
 write.csv(cases, "results/kazakhstan_cases.csv", row.names = FALSE)
+write.csv(round_df(by_hide), "results/validation_by_hide_length.csv", row.names = FALSE)
+write.csv(round_df(leave_one_out), "results/validation_leave_one_out.csv", row.names = FALSE)
 write.csv(round_df(backcast), "results/industry_backcast.csv", row.names = FALSE)
 write.csv(round_df(long_run), "results/industry_growth.csv", row.names = FALSE)
 
@@ -163,3 +198,4 @@ invisible(dev.off())
 
 print(round_df(validation), row.names = FALSE)
 print(round_df(long_run), row.names = FALSE)
+print(round_df(leave_one_out), row.names = FALSE)
