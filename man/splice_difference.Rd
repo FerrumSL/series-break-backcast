@@ -19,5 +19,6 @@ The new series extended back to the first old period, a named vector in period o
 }
 \description{
 Shifts the old series by new - old at the link. Keeps the old absolute changes instead of
-its growth rates.
+its growth rates. A downward shift larger than an early value gives a value of zero or
+below, with a warning: the difference splice does not suit that series.
 }

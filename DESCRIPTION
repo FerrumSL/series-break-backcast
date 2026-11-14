@@ -1,8 +1,8 @@
 Package: backcast
 Title: Extend Official Statistics Back Across Methodology Breaks
-Version: 1.1.0
-Authors@R: person("Ferrya", email = "114243237+FerrumSL@users.noreply.github.com",
-    role = c("aut", "cre"))
+Version: 1.0.0
+Authors@R: person("M.", "Ualiyev", email = "114243237+FerrumSL@users.noreply.github.com",
+    role = c("aut", "cre"), comment = c(ORCID = "0009-0001-9389-0158"))
 Description: When a statistics office changes how it measures something, it
     publishes the new-method series from some year on and the old one up to some
     year. This package extends the new series back with the published methods side

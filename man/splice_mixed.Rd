@@ -24,8 +24,13 @@ Between the ratio splice and interpolation. The old series is taken to be wrong 
 \code{base}, by a share \code{rho} of the gap at the link, and the error to grow geometrically from
 there, as it would if it came from activities the old series missed that grow faster than the
 rest. In logs the error is \code{d_T * rho^((T - t) / T)}, with \code{t} counted from \code{base}; \code{rho = 1}
-is the ratio splice, and \code{rho} near 0 approaches interpolation. de la Fuente leaves \code{rho} to
-judgement.
+is the ratio splice. As \code{rho} falls towards 0 the error in \code{base} goes to zero, as
+interpolation assumes, but the path differs: interpolation spreads the gap evenly in logs,
+while a small \code{rho} puts most of the correction just before the link (halfway between \code{base}
+and the link, interpolation applies half of the gap and \code{rho = 0.01} a tenth). Before \code{base}
+the same formula continues, so the correction keeps shrinking and is below \code{rho} there.
+de la Fuente leaves \code{rho} to judgement, or sets it from a half-life \code{H} of the error, the
+number of periods back from the link over which it halves: \code{rho = 0.5^(T / H)}.
 }
 \references{
 de la Fuente, A. (2013). A mixed splicing procedure for economic time series.

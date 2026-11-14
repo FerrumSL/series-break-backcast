@@ -224,3 +224,26 @@ test_that("validation also reports the growth error over a multi-year hidden spa
   expect_equal(backcast_validate(old, truth[as.character(2014:2020)], hide = c(2014, 2015),
                                  method = splice_ratio)$error_pct, c(0, 0))
 })
+
+test_that("the difference splice warns when the shift takes a value to zero or below", {
+  expect_warning(d <- splice_difference(c("2000" = 5, "2001" = 8, "2002" = 100), c("2002" = 20, "2003" = 22)),
+                 "zero or below in 2 period")
+  expect_equal(unname(d[c("2000", "2001")]), c(-75, -72))
+  expect_no_warning(splice_difference(c("2000" = 90, "2002" = 96), c("2002" = 100, "2003" = 103)))
+})
+
+test_that("the growth specification needs four shared periods", {
+  old <- setNames(c(90, 93, 96, 99, 102), 1998:2002)
+  new <- c("2002" = 130, "2003" = 134, "2004" = 139)
+  ind <- setNames(c(50, 52, 55, 57, 60, 61, 66), 1998:2004)
+  expect_error(splice_indicator(old, new, ind, spec = "growth"), "at least 4 periods")
+})
+
+test_that("mixed splicing puts the correction late, and continues before the base", {
+  old <- setNames(c(80, 84, 88, 90, 93, 96, 99, 102, 105, 108, 110), 1992:2002)
+  new <- c("2002" = 130, "2003" = 134)
+  share <- function(x, year) log(x[[year]] / old[[year]]) / log(130 / 110)
+  expect_equal(share(splice_interpolate(old, new, base = 1992), "1997"), 0.5)
+  expect_equal(share(splice_mixed(old, new, base = 1992, rho = 0.01), "1997"), 0.1)
+  expect_equal(share(splice_mixed(old, new, base = 1997, rho = 0.5), "1992"), 0.25)
+})

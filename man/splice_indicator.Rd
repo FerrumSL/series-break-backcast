@@ -28,7 +28,9 @@ needs an indicator measured the same way throughout and at least 3 shared period
 spurious regression and it is extrapolated outside the fit window, so treat it as fragile: the
 fit (elasticity, R2, residual SE, n, window) is returned as \code{attr(, "fit")}, and a warning is
 given when the backcast spans more periods than the fit window or the elasticity is outside
-between 0 and 3. \code{spec = "growth"} regresses yearly log changes (needs consecutive annual periods) and
-rebuilds the level backwards from the first new period; it does not depend on a common trend.
+between 0 and 3. \code{spec = "growth"} regresses yearly log changes (needs consecutive annual
+periods, at least 4 shared with \code{new}, since 3 give two changes and a line through two points)
+and rebuilds the level backwards from the first new period; it does not depend on a common
+trend.
 The result is the median path (exp of the fitted log), not the mean.
 }

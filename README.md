@@ -36,7 +36,7 @@ figures. *Link*: the period(s) published both ways that tie them together. *Base
 which the old series is assumed correct. *Backcast*: the new series extended back over the old
 periods, an estimate, never a published figure. *Splice*: any method that does this.
 
-**Status:** v1.1.0, an installable R package. Five methods and a break test, synthetic tests,
+**Status:** v1.0.0, an installable R package. Five methods and a break test, synthetic tests,
 a validation on four real Kazakhstan revisions, and two real backcasts: Kazakhstan's industry
 value added to 1995, and its population across the 2021 census.
 
@@ -59,8 +59,11 @@ link. Each method returns the new series extended back to the first old year.
 | `splice_mixed(base = , rho = )` | the old series was already wrong in `base` by a share `rho` of the final gap, and the error grew geometrically since, as missed activities outgrew the rest (de la Fuente 2013) | growth rates, corrected by an accelerating drift |
 | `splice_indicator(indicator = )` | a related series was measured the same way throughout | nothing; predicts from the indicator |
 
-`splice_mixed()` sits between the two extremes: `rho = 1` is the ratio splice, and `rho` near 0
-approaches interpolation. de la Fuente leaves `rho` to judgement
+`splice_mixed()` sits between the two extremes: `rho = 1` is the ratio splice, and as `rho` falls
+towards 0 the error in the base year goes to zero, as interpolation assumes. The path still
+differs: interpolation spreads the gap evenly in logs, while a small `rho` puts most of the
+correction just before the link (halfway to the link, interpolation applies half of the gap and
+`rho = 0.01` a tenth). de la Fuente leaves `rho` to judgement
 ([BBVA Research WP 13/02](https://www.bbvaresearch.com/wp-content/uploads/migrados/WP_1302_tcm348-364162.pdf)).
 
 `backcast_compare()` runs every method that applies and adds `spread_pct`, the range across
@@ -86,7 +89,8 @@ number or a string. With several link years the ratio splice uses sum(new)/sum(o
 difference splice mean(new - old). `spread_pct` is the range of the methods' assumptions, not a
 confidence interval. `splice_indicator()` returns its fit as `attr(, "fit")` and warns when it
 extrapolates over more periods than it was fitted on; `spec = "growth"` fits yearly changes
-instead of levels.
+instead of levels and needs at least 4 years shared with the new series. `splice_difference()`
+warns when its shift takes an early value to zero or below.
 
 ```r
 x <- backcast_compare(old, new, base = 2005, rho = 0.5)
@@ -118,7 +122,7 @@ real revisions above and the simulation for `find_break()`.
 - integer series the size of a population do not overflow
 
 ```sh
-R CMD build . && R CMD check --no-manual backcast_1.0.0.tar.gz
+R CMD build . && R CMD check --no-manual backcast_*.tar.gz
 ```
 
 ## Kazakhstan: four real revisions

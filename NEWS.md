@@ -1,4 +1,14 @@
-# backcast 1.1.0
+# backcast 1.0.0 (not released)
+
+No result in `results/` changes.
+
+- `splice_indicator(spec = "growth")` stops with fewer than 4 periods shared with `new`. With 3
+  it fitted a line through two yearly changes and reported R2 = 1 with no residual error.
+- `splice_difference()` warns when the shift takes an early value to zero or below.
+- `splice_mixed()` documentation corrected: a `rho` near 0 does not approach interpolation. It
+  shares interpolation's starting point (no error in `base`) but puts most of the correction
+  just before the link. Documented what happens before `base`, and the half-life form of `rho`
+  (de la Fuente 2013, equation 24).
 
 ## Fixes
 * A numeric `link` (such as `2002`) works in every splice; before, `splice_ratio()` returned NA and

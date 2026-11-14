@@ -7,7 +7,7 @@ authors:
   - given-names: "M."
     family-names: Ualiyev
     orcid: "https://orcid.org/0009-0001-9389-0158"
-version: 1.1.0
+version: 1.0.0
 date-released: "2026-11-08"
 license: GPL-2.0-only
 repository-code: "https://github.com/FerrumSL/series-break-backcast"

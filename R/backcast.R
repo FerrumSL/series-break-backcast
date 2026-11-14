@@ -91,7 +91,8 @@ splice_ratio <- function(old, new, link = NULL) {
 #' Difference splice
 #'
 #' Shifts the old series by new - old at the link. Keeps the old absolute changes instead of
-#' its growth rates.
+#' its growth rates. A downward shift larger than an early value gives a value of zero or
+#' below, with a warning: the difference splice does not suit that series.
 #'
 #' @inheritParams splice_ratio
 #' @inherit splice_ratio return
@@ -99,7 +100,12 @@ splice_ratio <- function(old, new, link = NULL) {
 splice_difference <- function(old, new, link = NULL) {
   p <- prep(old, new, link, "splice_difference"); old <- p$old; new <- p$new; link <- p$link
   e <- early(old, new)
-  extend(old[e] + mean(new[link] - old[link]), new)
+  back <- old[e] + mean(new[link] - old[link])
+  if (any(back <= 0)) {
+    warning("splice_difference: the shift gives a value of zero or below in ", sum(back <= 0),
+            " period(s), first in ", names(back)[which(back <= 0)[1]], ".", call. = FALSE)
+  }
+  extend(back, new)
 }
 
 #' Interpolation (Prados de la Escosura)
@@ -134,8 +140,13 @@ splice_interpolate <- function(old, new, base, link = NULL) {
 #' `base`, by a share `rho` of the gap at the link, and the error to grow geometrically from
 #' there, as it would if it came from activities the old series missed that grow faster than the
 #' rest. In logs the error is `d_T * rho^((T - t) / T)`, with `t` counted from `base`; `rho = 1`
-#' is the ratio splice, and `rho` near 0 approaches interpolation. de la Fuente leaves `rho` to
-#' judgement.
+#' is the ratio splice. As `rho` falls towards 0 the error in `base` goes to zero, as
+#' interpolation assumes, but the path differs: interpolation spreads the gap evenly in logs,
+#' while a small `rho` puts most of the correction just before the link (halfway between `base`
+#' and the link, interpolation applies half of the gap and `rho = 0.01` a tenth). Before `base`
+#' the same formula continues, so the correction keeps shrinking and is below `rho` there.
+#' de la Fuente leaves `rho` to judgement, or sets it from a half-life `H` of the error, the
+#' number of periods back from the link over which it halves: `rho = 0.5^(T / H)`.
 #'
 #' @inheritParams splice_interpolate
 #' @param base Period from which the error is taken to grow.
@@ -165,8 +176,10 @@ splice_mixed <- function(old, new, base, rho, link = NULL) {
 #' spurious regression and it is extrapolated outside the fit window, so treat it as fragile: the
 #' fit (elasticity, R2, residual SE, n, window) is returned as `attr(, "fit")`, and a warning is
 #' given when the backcast spans more periods than the fit window or the elasticity is outside
-#' between 0 and 3. `spec = "growth"` regresses yearly log changes (needs consecutive annual periods) and
-#' rebuilds the level backwards from the first new period; it does not depend on a common trend.
+#' between 0 and 3. `spec = "growth"` regresses yearly log changes (needs consecutive annual
+#' periods, at least 4 shared with `new`, since 3 give two changes and a line through two points)
+#' and rebuilds the level backwards from the first new period; it does not depend on a common
+#' trend.
 #' The result is the median path (exp of the fitted log), not the mean.
 #'
 #' @inheritParams splice_ratio
@@ -194,6 +207,7 @@ splice_indicator <- function(old, new, indicator, spec = c("levels", "growth")) 
   } else {
     pn <- as.numeric(fit_periods)
     if (any(diff(pn) != 1)) stop("spec = \"growth\" needs consecutive annual periods in the fit window.")
+    if (length(pn) < 4) stop("spec = \"growth\" needs at least 4 periods shared with `new`.")
     # backward from the first new period: all old periods up to it must be covered, no gaps
     first <- fit_periods[1]
     chain <- as.character(seq(as.numeric(first), min(as.numeric(e)), by = -1))
